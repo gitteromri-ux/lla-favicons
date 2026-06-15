@@ -1,14 +1,11 @@
-# Longevity Life Academy — Favicon & Logo Pack
+# Longevity Life Academy — Logo & Favicon Pack (15 versions)
 
-A showcase page with 5 brand-true favicon/logo versions, each available as **SVG**, **PNG** (16–512px), and **ICO**, with working download buttons.
+Showcase page with 15 brand-true identity assets in 3 styles × 5 color treatments.
+Each downloads as **SVG**, **PNG** (16–512px + hi-res), and **ICO** — all with working buttons.
 
-**Live site:** https://gitteromri-ux.github.io/lla-favicons/
+**Live:** https://gitteromri-ux.github.io/lla-favicons/
 
-Versions:
-- A — Navy / white "LLA" (Playfair Display)
-- B — Navy / gradient "LLA" (Playfair Display)
-- C — Transparent / white "LLA" (Playfair Display)
-- D — White / navy "LLA" (Playfair Display)
-- E — Navy / white "LLA" (EB Garamond)
+Styles: Emblem only · "LLA" only · Emblem + "LLA"
+Treatments: A Navy/White · B Navy/Gradient · C Transparent · D White/Navy · E Navy/EB Garamond
 
-Brand colors: navy `#010D25`, mint `#6CF3D2`, gradient mint→blue.
+Brand: navy `#010D25`, mint `#6CF3D2`, gradient mint→blue. Fonts: Playfair Display, EB Garamond.
