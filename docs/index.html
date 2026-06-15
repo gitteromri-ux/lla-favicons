@@ -90,7 +90,8 @@ GROUPS.forEach(g=>{
     const base = `assets/${id}`;
     const meta = VAR[v];
     const preview = (g.key==='emblem') ? `${base}/${id}-256.png` : `${base}/${id}-full-2x.png`;
-    let swatches = sizes.map(s=>`<div class="size"><img src="${base}/${id}-${s}.png" width="${Math.min(s,64)}" height="${Math.min(s,64)}" alt="${s}px" style="width:${Math.min(s,64)}px;height:${Math.min(s,64)}px"><span>${s}px</span></div>`).join('');
+    const isLockup = (g.key==='lockup');
+    let swatches = sizes.map(s=>{const h=Math.min(s,64); return `<div class="size"><img src="${base}/${id}-${s}.png" alt="${s}px" style="height:${h}px;width:auto"><span>${s}px</span></div>`;}).join('');
     let pngBtns = sizes.map(s=>`<a class="btn ghost" href="${base}/${id}-${s}.png" download="LLA-${id}-${s}.png">${s}</a>`).join('');
     const card = document.createElement('div'); card.className='card';
     card.innerHTML = `
