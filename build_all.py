@@ -1,131 +1,112 @@
 #!/usr/bin/env python3
-"""Build 15 LLA favicon versions: emblem-only, LLA-only, lockup.
-Real emblem (extracted from logo) + Playfair Display / EB Garamond embedded.
-Renders hi-res PNGs from a large master so downloads are crisp."""
-import os, json, base64, io, shutil
+"""Build 15 LLA favicon versions as TRUE VECTORS (real SVG paths — no embedded
+raster). Styles: emblem-only, LLA-monogram-only, lockup (emblem + LLA).
+Treatments A-E. Renders crisp PNG + ICO from the vector master for legacy use.
+"""
+import os, math, shutil, re
 import cairosvg
 from PIL import Image
+from emblem_vector import build_emblem_group, CX, CY
+from text_to_path import text_svg_group
 
 ROOT = "/home/user/workspace/site"
 ASSETS = os.path.join(ROOT, "docs", "assets")
-B64 = json.load(open(os.path.join(ROOT, "_assets_b64.json")))
+SVG_DIR = os.path.join(ROOT, "lla_svgs")
+PLAYFAIR = "/home/user/workspace/fonts/PlayfairDisplay.ttf"
+GARAMOND = "/home/user/workspace/fonts/EBGaramond.ttf"
 
 NAVY = "#010D25"
 MINT = "#6CF3D2"
 BLUE = "#5A96EB"
+WHITE = "#FFFFFF"
 
 PNG_SIZES = [16, 32, 48, 64, 128, 180, 192, 256, 512]
-MASTER = 1024  # render PNGs by downscaling from this master size for crispness
 
-EMBLEM_DATA = "data:image/png;base64," + B64["emblem"]
+# Treatment table:
+# bg, fg paint, font for monogram, font path, weight
+TREATMENTS = {
+    "A": dict(name="Navy / White",     bg=NAVY,  fg=WHITE,      grad=False, font=PLAYFAIR, wght=700),
+    "B": dict(name="Navy / Gradient",  bg=NAVY,  fg="grad",     grad=True,  font=PLAYFAIR, wght=700),
+    "C": dict(name="Transparent",      bg=None,  fg=WHITE,      grad=False, font=PLAYFAIR, wght=700),
+    "D": dict(name="White / Navy",     bg=WHITE, fg=NAVY,       grad=False, font=PLAYFAIR, wght=700),
+    "E": dict(name="Navy / Garamond",  bg=NAVY,  fg=WHITE,      grad=False, font=GARAMOND, wght=600),
+}
 
-def font_face(family, b64):
-    return (f"@font-face{{font-family:'{family}';"
-            f"src:url(data:font/ttf;base64,{b64}) format('truetype');"
-            f"font-weight:400 900;font-style:normal;}}")
-
-FONT_DEFS = (font_face("Playfair Display", B64["playfair"]) +
-             font_face("EB Garamond", B64["ebgaramond"]))
-
-def grad_def():
-    return (f'<linearGradient id="g" x1="0" y1="0" x2="0" y2="1">'
+def grad_def(x1=0.85, y1=0.0, x2=0.1, y2=1.0):
+    return (f'<linearGradient id="embGrad" x1="{x1}" y1="{y1}" x2="{x2}" y2="{y2}">'
             f'<stop offset="0" stop-color="{MINT}"/>'
             f'<stop offset="1" stop-color="{BLUE}"/></linearGradient>')
 
-# ---- Treatment definitions ----
-# A=Navy bg / White fg / Playfair
-# B=Navy bg / Gradient fg / Playfair
-# C=Transparent bg / White fg / Playfair
-# D=White bg / Navy fg / Playfair
-# E=Navy bg / White fg / EB Garamond
-TREATMENTS = {
-    "A": dict(bg=NAVY, fg="#FFFFFF", font="Playfair Display", grad=False),
-    "B": dict(bg=NAVY, fg="grad",    font="Playfair Display", grad=True),
-    "C": dict(bg=None,  fg="#FFFFFF", font="Playfair Display", grad=False),
-    "D": dict(bg="#FFFFFF", fg=NAVY,  font="Playfair Display", grad=False),
-    "E": dict(bg=NAVY, fg="#FFFFFF", font="EB Garamond",       grad=False),
-}
+def fg_paint(t):
+    return "url(#embGrad)" if t["fg"] == "grad" else t["fg"]
 
-def bg_rect(t, S, r):
+def bg_rect(t, W, H, r):
     if t["bg"] is None:
         return ""
-    return f'<rect x="0" y="0" width="{S}" height="{S}" rx="{r}" fill="{t["bg"]}"/>'
+    return f'<rect x="0" y="0" width="{W:.2f}" height="{H:.2f}" rx="{r:.2f}" fill="{t["bg"]}"/>'
 
-def fg_paint(t):
-    return "url(#g)" if t["fg"] == "grad" else t["fg"]
+def svg_open(W, H):
+    return (f'<svg xmlns="http://www.w3.org/2000/svg" width="{W:.2f}" height="{H:.2f}" '
+            f'viewBox="0 0 {W:.2f} {H:.2f}">')
 
 # ---------- EMBLEM ONLY ----------
-def svg_emblem(key, t):
-    S = 512
-    r = int(S*0.18)
-    # emblem occupies a centered square; scale slightly for padding
-    pad = S*0.12
-    e = S - 2*pad
-    return f'''<svg xmlns="http://www.w3.org/2000/svg" width="{S}" height="{S}" viewBox="0 0 {S} {S}">
-<defs><style>{FONT_DEFS}</style>{grad_def()}</defs>
-{bg_rect(t,S,r)}
-<image x="{pad}" y="{pad}" width="{e}" height="{e}" href="{EMBLEM_DATA}"/>
-</svg>'''
-
-# ---------- LLA ONLY ----------
-def svg_lla(key, t):
-    S = 512
-    r = int(S*0.18)
+def svg_emblem(t):
+    S = 512; r = S * 0.18
     paint = fg_paint(t)
-    return f'''<svg xmlns="http://www.w3.org/2000/svg" width="{S}" height="{S}" viewBox="0 0 {S} {S}">
-<defs><style>{FONT_DEFS}</style>{grad_def()}</defs>
-{bg_rect(t,S,r)}
-<text x="{S/2}" y="{S/2}" font-family="{t['font']}" font-weight="700" font-size="230" fill="{paint}" text-anchor="middle" dominant-baseline="central" letter-spacing="2">LLA</text>
-</svg>'''
+    g = build_emblem_group(stroke=paint, node_fill=paint, dot_fill=paint, sw=9)
+    return (f'{svg_open(S,S)}<defs>{grad_def()}</defs>'
+            f'{bg_rect(t,S,S,r)}{g}</svg>')
 
-# ---------- LOCKUP (emblem + LLA) ----------
-from PIL import ImageFont
-_FONT_PATHS = {
-    "Playfair Display": "/home/user/workspace/fonts/PlayfairDisplay.ttf",
-    "EB Garamond": "/home/user/workspace/fonts/EBGaramond.ttf",
-}
-def _text_width(text, family, px, tracking=0):
-    f = ImageFont.truetype(_FONT_PATHS[family], int(px))
-    w = f.getlength(text)
-    return w + tracking * (len(text) - 1)
+# ---------- LLA MONOGRAM ONLY ----------
+def svg_lla(t):
+    S = 512; r = S * 0.18
+    paint = fg_paint(t)
+    target_h = 168 if t["font"] == PLAYFAIR else 176
+    track = 12 if t["font"] == PLAYFAIR else 30
+    g, w, h = text_svg_group("LLA", t["font"], target_h, S/2, S/2, paint,
+                             wght=t["wght"], tracking=track)
+    return (f'{svg_open(S,S)}<defs>{grad_def()}</defs>'
+            f'{bg_rect(t,S,S,r)}{g}</svg>')
 
-def svg_lockup(key, t):
-    # Balanced horizontal lockup, proportions modeled on the real logo.
+# ---------- LOCKUP (emblem + divider + LLA) ----------
+def svg_lockup(t):
     H = 512
-    pad = H * 0.16                 # generous outer padding (top/bottom + sides)
-    em = H - 2 * pad               # emblem fits within padded height
+    pad = H * 0.14
+    em = H - 2 * pad           # emblem square fits in padded height
+    # emblem is drawn in its own 512 coord space; scale + translate it
+    es = em / 512.0
     ex = pad
-    ey = pad
-    # cap height of LLA tuned so the text reads at the emblem's optical size,
-    # not taller than it. Playfair cap-height ~0.70em, so font px ~ capH/0.70.
-    capH = em * 0.62
-    fpx = capH / 0.70
-    track = 4
+    ey = (H - em) / 2
     paint = fg_paint(t)
-    gap1 = H * 0.085               # emblem -> divider gap
-    gap2 = H * 0.095               # divider -> text gap
+    emblem_g = build_emblem_group(stroke=paint, node_fill=paint, dot_fill=paint, sw=9)
+    emblem_block = (f'<g transform="translate({ex:.2f} {ey:.2f}) scale({es:.5f})">'
+                    f'{emblem_g}</g>')
+    # divider
+    gap1 = H * 0.055
     divx = ex + em + gap1
-    txx = divx + 3 + gap2
-    tw = _text_width("LLA", t["font"], fpx, track)
-    W = txx + tw + pad             # right padding mirrors left
-    r = int(H * 0.16)
-    divcol = "#FFFFFF" if t["bg"]==NAVY else (NAVY if t["bg"]=="#FFFFFF" else "#FFFFFF")
-    if t["fg"]=="grad": divcol="url(#g)"
-    elif t["fg"]!="grad": divcol=t["fg"]
-    divh = capH * 1.25
+    cap_h = em * 0.46
+    divh = cap_h * 1.35
     divy = (H - divh) / 2
-    bg = "" if t["bg"] is None else f'<rect x="0" y="0" width="{W:.1f}" height="{H}" rx="{r}" fill="{t["bg"]}"/>'
-    return f'''<svg xmlns="http://www.w3.org/2000/svg" width="{W:.1f}" height="{H}" viewBox="0 0 {W:.1f} {H}">
-<defs><style>{FONT_DEFS}</style>{grad_def()}</defs>
-{bg}
-<image x="{ex:.1f}" y="{ey:.1f}" width="{em:.1f}" height="{em:.1f}" href="{EMBLEM_DATA}"/>
-<rect x="{divx:.1f}" y="{divy:.1f}" width="3" height="{divh:.1f}" fill="{divcol}" opacity="0.5"/>
-<text x="{txx:.1f}" y="{H/2}" font-family="{t['font']}" font-weight="700" font-size="{fpx:.1f}" fill="{paint}" dominant-baseline="central" letter-spacing="{track}">LLA</text>
-</svg>'''
+    divcol = paint if t["fg"] != "grad" else "url(#embGrad)"
+    if t["bg"] == NAVY and t["fg"] == WHITE: divcol = WHITE
+    divider = (f'<rect x="{divx:.2f}" y="{divy:.2f}" width="3.2" height="{divh:.2f}" '
+               f'rx="1.6" fill="{divcol}" opacity="0.55"/>')
+    # LLA text
+    gap2 = H * 0.06
+    track = 12 if t["font"] == PLAYFAIR else 30
+    # measure first to know width, placing text center after divider+gap
+    tmp_g, tw, th = text_svg_group("LLA", t["font"], cap_h, 0, 0, paint,
+                                   wght=t["wght"], tracking=track)
+    txc = divx + 3.2 + gap2 + tw / 2
+    g, tw, th = text_svg_group("LLA", t["font"], cap_h, txc, H/2, paint,
+                               wght=t["wght"], tracking=track)
+    W = txc + tw / 2 + pad
+    r = H * 0.16
+    return (f'{svg_open(W,H)}<defs>{grad_def()}</defs>'
+            f'{bg_rect(t,W,H,r)}{emblem_block}{divider}{g}</svg>')
 
 BUILDERS = {"emblem": svg_emblem, "lla": svg_lla, "lockup": svg_lockup}
 
-import re
 def svg_dims(svg_str):
     w = float(re.search(r'width="([\d.]+)"', svg_str).group(1))
     h = float(re.search(r'height="([\d.]+)"', svg_str).group(1))
@@ -135,7 +116,15 @@ def render_png(svg_str, out_path, w, h):
     cairosvg.svg2png(bytestring=svg_str.encode(), write_to=out_path,
                      output_width=int(round(w)), output_height=int(round(h)))
 
+# Also write the 5 brand SVGs into lla_svgs/ (lockup style, brand-named)
+LLA_SVGS_MAP = {
+    "A": "A_navy_white", "B": "B_navy_gradient", "C": "C_transparent",
+    "D": "D_white_navy", "E": "E_navy_garamond",
+}
+
 def main():
+    for d in (ASSETS, SVG_DIR):
+        os.makedirs(d, exist_ok=True)
     for group in ("emblem", "lla", "lockup"):
         for tk, t in TREATMENTS.items():
             name = f"{group}_{tk}"
@@ -143,31 +132,26 @@ def main():
             if os.path.exists(d):
                 shutil.rmtree(d)
             os.makedirs(d, exist_ok=True)
-            svg = BUILDERS[group](tk, t)
-            # save SVG (with embedded fonts + emblem)
+            svg = BUILDERS[group](t)
             with open(os.path.join(d, f"{name}.svg"), "w") as f:
                 f.write(svg)
             vw, vh = svg_dims(svg)
-            ar = vw / vh   # true aspect ratio from the SVG
-            # PNG icon sizes: 's' is the height; width follows aspect ratio
+            ar = vw / vh
             for s in PNG_SIZES:
                 render_png(svg, os.path.join(d, f"{name}-{s}.png"), s*ar, s)
-            # hi-res full renders
-            for mult, tag in [(1,"1x"),(2,"2x"),(4,"4x")]:
+            for mult, tag in [(1, "1x"), (2, "2x"), (4, "4x")]:
                 base = 512*mult
                 render_png(svg, os.path.join(d, f"{name}-full-{tag}.png"), base*ar, base)
-            # ICO must be square -> render emblem-style square version for lockup ICO
+            # ICO (square) from rendered sizes
             ico_imgs = []
-            for s in [16,32,48,64,128,256]:
+            for s in [16, 32, 48, 64, 128, 256]:
                 if abs(ar - 1.0) < 0.01:
-                    p = os.path.join(d, f"{name}-{s}.png")
-                    ico_imgs.append(Image.open(p).convert("RGBA"))
+                    ico_imgs.append(Image.open(os.path.join(d, f"{name}-{s}.png")).convert("RGBA"))
                 else:
-                    # paste wide render onto a square transparent canvas
                     tmp = os.path.join(d, f"_tmp-{s}.png")
                     render_png(svg, tmp, s*ar, s)
                     wide = Image.open(tmp).convert("RGBA")
-                    sq = Image.new("RGBA", (max(wide.size), max(wide.size)), (0,0,0,0))
+                    sq = Image.new("RGBA", (max(wide.size), max(wide.size)), (0, 0, 0, 0))
                     sq.alpha_composite(wide, (0, (sq.height-wide.height)//2))
                     sq = sq.resize((s, s), Image.LANCZOS)
                     ico_imgs.append(sq)
@@ -175,6 +159,13 @@ def main():
             ico_imgs[0].save(os.path.join(d, f"{name}.ico"),
                              sizes=[(im.width, im.height) for im in ico_imgs])
             print(f"built {name}  ({vw:.0f}x{vh:.0f}, ar={ar:.2f})")
+    # brand-named lockup SVGs + emblem-only SVGs in lla_svgs/
+    for tk, t in TREATMENTS.items():
+        base = LLA_SVGS_MAP[tk]
+        with open(os.path.join(SVG_DIR, f"{base}.svg"), "w") as f:
+            f.write(svg_lockup(t))
+        with open(os.path.join(SVG_DIR, f"{base}_emblem.svg"), "w") as f:
+            f.write(svg_emblem(t))
     print("DONE")
 
 if __name__ == "__main__":

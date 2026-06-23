@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Longevity Life Academy — Logo &amp; Favicon Pack (15 versions)</title>
+<link rel="icon" type="image/svg+xml" href="assets/emblem_A/emblem_A.svg">
 <link rel="icon" type="image/png" sizes="32x32" href="assets/emblem_A/emblem_A-32.png">
 <link rel="apple-touch-icon" sizes="180x180" href="assets/emblem_A/emblem_A-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -53,10 +54,10 @@ footer code{color:#cfe0f7}
 <body>
 <div class="wrap">
   <header>
-    <div class="brand"><img src="assets/lockup_A/lockup_A-full-2x.png" alt="Longevity Life Academy"></div>
+    <div class="brand"><img src="assets/lockup_A/lockup_A.svg" alt="Longevity Life Academy"></div>
     <h1>Logo &amp; Favicon Pack</h1>
-    <p class="sub">15 brand-true versions of the Longevity Life Academy identity, in three styles × five color treatments. Every version downloads as scalable <b>SVG</b> and <b>PNG</b> (16–512px), plus a multi-resolution <b>ICO</b>.</p>
-    <div class="note">Sizing guide: use the <b>Emblem-only</b> for the tiny browser-tab favicon (clearest at 16–32px), the <b>Emblem + LLA</b> lockup for your site header / large app icon (180px+), and <b>LLA-only</b> wherever you want a compact wordmark.</div>
+    <p class="sub">15 brand-true versions of the Longevity Life Academy identity, in three styles × five color treatments. Every version is built from <b>true vector geometry</b> — infinitely scalable, razor-sharp at any size. Downloads as scalable <b>SVG</b>, <b>PNG</b> (16–512px), and a multi-resolution <b>ICO</b>.</p>
+    <div class="note"><b>True vectors — no pixelation.</b> The emblem (DNA helix + orbit + node) and the “LLA” monogram are drawn as real SVG paths, not traced or embedded images. They stay crisp from a 16px browser tab up to a billboard. <br><br>Sizing guide: use the <b>Emblem-only</b> for the browser-tab favicon (clearest at 16–32px), the <b>Emblem + LLA</b> lockup for your site header / large app icon (180px+), and <b>LLA-only</b> wherever you want a compact wordmark.</div>
   </header>
   <div id="root"></div>
   <footer>
@@ -89,7 +90,7 @@ GROUPS.forEach(g=>{
     const id = `${g.key}_${v}`;
     const base = `assets/${id}`;
     const meta = VAR[v];
-    const preview = (g.key==='emblem') ? `${base}/${id}-256.png` : `${base}/${id}-full-2x.png`;
+    const preview = `${base}/${id}.svg`;
     const isLockup = (g.key==='lockup');
     let swatches = sizes.map(s=>{const h=Math.min(s,64); return `<div class="size"><img src="${base}/${id}-${s}.png" alt="${s}px" style="height:${h}px;width:auto"><span>${s}px</span></div>`;}).join('');
     let pngBtns = sizes.map(s=>`<a class="btn ghost" href="${base}/${id}-${s}.png" download="LLA-${id}-${s}.png">${s}</a>`).join('');
