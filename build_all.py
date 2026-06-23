@@ -32,8 +32,11 @@ TREATMENTS = {
     "E": dict(name="Navy / Garamond",  bg=NAVY,  fg=WHITE,      grad=False, font=GARAMOND, wght=600),
 }
 
-def grad_def(x1=0.85, y1=0.0, x2=0.1, y2=1.0):
-    return (f'<linearGradient id="embGrad" x1="{x1}" y1="{y1}" x2="{x2}" y2="{y2}">'
+def grad_def(x1=0.78, y1=0.05, x2=0.12, y2=0.95):
+    # gradientUnits=userSpaceOnUse over a 512 box so it matches the original
+    # (mint top-right -> blue bottom-left), regardless of where the group sits.
+    return (f'<linearGradient id="embGrad" x1="{x1*512:.1f}" y1="{y1*512:.1f}" '
+            f'x2="{x2*512:.1f}" y2="{y2*512:.1f}" gradientUnits="userSpaceOnUse">'
             f'<stop offset="0" stop-color="{MINT}"/>'
             f'<stop offset="1" stop-color="{BLUE}"/></linearGradient>')
 
@@ -53,7 +56,7 @@ def svg_open(W, H):
 def svg_emblem(t):
     S = 512; r = S * 0.18
     paint = fg_paint(t)
-    g = build_emblem_group(stroke=paint, node_fill=paint, dot_fill=paint, sw=9)
+    g = build_emblem_group(stroke=paint, box=S)
     return (f'{svg_open(S,S)}<defs>{grad_def()}</defs>'
             f'{bg_rect(t,S,S,r)}{g}</svg>')
 
@@ -78,7 +81,9 @@ def svg_lockup(t):
     ex = pad
     ey = (H - em) / 2
     paint = fg_paint(t)
-    emblem_g = build_emblem_group(stroke=paint, node_fill=paint, dot_fill=paint, sw=9)
+    # emblem drawn in its own 512 space, scaled by es into the lockup; the
+    # gradient is userSpaceOnUse over 512 so we wrap it to keep it consistent.
+    emblem_g = build_emblem_group(stroke=paint, box=512)
     emblem_block = (f'<g transform="translate({ex:.2f} {ey:.2f}) scale({es:.5f})">'
                     f'{emblem_g}</g>')
     # divider
